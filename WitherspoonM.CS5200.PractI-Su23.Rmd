@@ -12,7 +12,7 @@ library(RMySQL)
 # connect to database hosted on db4free server
 dbcon <-  dbConnect(RMySQL::MySQL(), 
                    user = sql9627833, 
-                   password = sLiITKEpTh,
+                   password = sLilTKEpTh,
                    dbname = sql9627833, 
                    host = sql9.freemysqlhosting.net, 
                    port = 3306)
