@@ -1,0 +1,10 @@
+---
+title: "Practicum I CS5200"
+author: "Marin Witherspoon and Sumit "
+date: "Summer Full 2023"
+---
+
+## Connect to Database
+
+## Create Database
+
