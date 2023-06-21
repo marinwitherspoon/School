@@ -4,11 +4,13 @@ author: "Marin Witherspoon and Sumit Hawal"
 date: "Summer Full 2023"
 ---
 
+```{r, Limport}
+library(RMySQL)
+```
+
 ## Connect to Database
 
 ```{r, connect}
-library(RMySQL)
-
 # connect to database hosted on db4free server
 dbcon <-  dbConnect(RMySQL::MySQL(), 
                    user = 'sql9627833', 
@@ -20,3 +22,20 @@ dbcon <-  dbConnect(RMySQL::MySQL(),
 
 ## Create Database
 
+Drops the table if necicary
+```{sql 4A1, connection=dbcon}
+DROP TABLE IF EXISTS flights;
+```
+Creates tables with the necicary column restrictions
+# ADD FORGEN KEY CONNECTION TO TABLE CREATION!
+```{sql 4A2, connection=dbcon}
+CREATE TABLE flights (
+  fid INTEGER PRIMARY KEY,
+  date DATE,
+  origin INTEGER,
+  airline TEXT,
+  aircraft TEXT,
+  altitude INTEGER,
+  heavy BOOLEAN
+  CHECK (altitude > 0));
+```
