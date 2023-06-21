@@ -1,6 +1,6 @@
 ---
 title: "Practicum I CS5200"
-author: "Marin Witherspoon and Sumit "
+author: "Marin Witherspoon and Sumit Hawal"
 date: "Summer Full 2023"
 ---
 
