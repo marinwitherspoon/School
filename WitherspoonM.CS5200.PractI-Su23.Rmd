@@ -5,6 +5,18 @@ date: "Summer Full 2023"
 ---
 
 ## Connect to Database
-/* hello Marin */
+
+```{r, connect}
+library(RMySQL)
+
+# connect to database hosted on db4free server
+dbcon <-  dbConnect(RMySQL::MySQL(), 
+                   user = sql9627833, 
+                   password = sLiITKEpTh,
+                   dbname = sql9627833, 
+                   host = sql9.freemysqlhosting.net, 
+                   port = 3306)
+```
+
 ## Create Database
 
