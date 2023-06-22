@@ -11,27 +11,6 @@ library(RMySQL)
 ## Create Database
 
 ### A
-
-Drops the table if necessary
-```{sql 4A1, connection=dbcon}
-DROP TABLE IF EXISTS flights;
-```
-Creates tables with the necessary column restrictions
-# ADD FORGEN KEY CONNECTION TO TABLE CREATION!
-```{sql 4A2, connection=dbcon}
-CREATE TABLE flights (
-  fid INTEGER PRIMARY KEY,
-  date DATE,
-  origin INTEGER,
-  airline TEXT,
-  aircraft TEXT,
-  altitude INTEGER,
-  heavy BOOLEAN
-  CHECK (altitude > 0));
-```
-### B
-
-### A
 Drops the table if necessary
 ```{sql 4A1, connection=dbcon}
 DROP TABLE IF EXISTS flights;
