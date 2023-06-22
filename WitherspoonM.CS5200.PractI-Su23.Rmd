@@ -8,18 +8,6 @@ date: "Summer Full 2023"
 library(RMySQL)
 ```
 
-## Connect to Database
-
-```{r, connect}
-# connect to database hosted on db4free server
-dbcon <-  dbConnect(RMySQL::MySQL(), 
-                   user = 'sql9627833', 
-                   password = 'sLilTKEpTh',
-                   dbname = 'sql9627833', 
-                   host = 'sql9.freemysqlhosting.net', 
-                   port = 3306)
-```
-
 ## Create Database
 
 ### A
@@ -42,7 +30,26 @@ CREATE TABLE flights (
   CHECK (altitude > 0));
 ```
 ### B
-/* my changes  copy code from here */
+
+### A
+Drops the table if necessary
+```{sql 4A1, connection=dbcon}
+DROP TABLE IF EXISTS flights;
+```
+Creates tables with the necessary column restrictions
+# ADD FORGEN KEY CONNECTION TO TABLE CREATION!
+```{sql 4A2, connection=dbcon}
+CREATE TABLE flights (
+  fid INTEGER PRIMARY KEY,
+  date DATE,
+  origin INTEGER,
+  airline TEXT,
+  aircraft TEXT,
+  altitude INTEGER check (altitude> 0),
+  heavy BOOLEAN);
+```
+### B
+
 
 ```{sql 4B1, connection=dbcon}
 DROP TABLE IF EXISTS airports;
@@ -56,13 +63,10 @@ CREATE TABLE airports (
 );
 ```
 
-### C
 
 ```{sql 4C, connection = dbcon}
 ALTER TABLE flights ADD FOREIGN KEY (origin) REFERENCES airports(aid);
 ```
-
-### D
 
 ```{sql connection=dbcon}
 drop table if exists conditions;
@@ -79,7 +83,6 @@ CREATE TABLE conditions (
 )
 ```
 
-### E
 
 ```{sql 4E, connection=dbcon }
 /* assuming the conditions are text that connect to sky_conditions */
@@ -98,16 +101,15 @@ CREATE TABLE strikes (
 /* conditions column as well */
 ```
 
-### F
 
 ```{sql 4F, connection=dbcon }
 ALTER TABLE strikes ADD FOREIGN KEY (fid) REFERENCES flights(fid)
 ```
 
-### G
 
 ```{sql 4G, connection=dbcon, eval =F}
 /* evaluating our tables by adding random data */
 
 ```
 
+/*my changes  copy code from here*/
