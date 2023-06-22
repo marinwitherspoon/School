@@ -56,10 +56,13 @@ CREATE TABLE airports (
 );
 ```
 
+### C
 
 ```{sql 4C, connection = dbcon}
 ALTER TABLE flights ADD FOREIGN KEY (origin) REFERENCES airports(aid);
 ```
+
+### D
 
 ```{sql connection=dbcon}
 drop table if exists conditions;
@@ -76,6 +79,7 @@ CREATE TABLE conditions (
 )
 ```
 
+### E
 
 ```{sql 4E, connection=dbcon }
 /* assuming the conditions are text that connect to sky_conditions */
@@ -94,11 +98,13 @@ CREATE TABLE strikes (
 /* conditions column as well */
 ```
 
+### F
 
 ```{sql 4F, connection=dbcon }
 ALTER TABLE strikes ADD FOREIGN KEY (fid) REFERENCES flights(fid)
 ```
 
+### G
 
 ```{sql 4G, connection=dbcon, eval =F}
 /* evaluating our tables by adding random data */
