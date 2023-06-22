@@ -4,35 +4,70 @@ author: "Marin Witherspoon and Sumit Hawal"
 date: "Summer Full 2023"
 ---
 
-```{r, Limport}
+```{r, Limport, include = TRUE}
 library(RMySQL)
+library(RSQLite, quietly=T)
+library(RMySQL, quietly=T)
+
+dbc <- dbConnect(RSQLite::SQLite(), ":memory:")
+```
+
+## Connect to Database
+
+```{r, connect}
+# connect to database hosted on db4free server
+dbcon <-  dbConnect(RMySQL::MySQL(), 
+                   user = 'sql9627833', 
+                   password = 'sLilTKEpTh',
+                   dbname = 'sql9627833', 
+                   host = 'sql9.freemysqlhosting.net', 
+                   port = 3306)
 ```
 
 ## Create Database
 
-### A
-Drops the table if necessary
-```{sql 4A1, connection=dbcon}
+### Set Up
+
+Temporally removes foreign key check so that tables can be reset.
+```{sql 4A1, connection=dbcon, include = TRUE}
+SET FOREIGN_KEY_CHECKS = 0;
+```
+
+```{sql 4A2, connection=dbcon, include = TRUE}
 DROP TABLE IF EXISTS flights;
 ```
+
+```{sql 4B1, connection=dbcon, include = TRUE}
+DROP TABLE IF EXISTS airports;
+```
+
+```{sql connection=dbcon, include = TRUE}
+DROP TABLE IF EXISTS conditions;
+```
+
+```{sql connection=dbcon, include = TRUE}
+DROP TABLE IF EXISTS strikes;
+```
+
+```{sql 4A3, connection=dbcon, include = TRUE}
+SET FOREIGN_KEY_CHECKS = 1;
+```
+
+### A
+
 Creates tables with the necessary column restrictions
-# ADD FORGEN KEY CONNECTION TO TABLE CREATION!
-```{sql 4A2, connection=dbcon}
+```{sql 4A4, connection=dbcon}
 CREATE TABLE flights (
   fid INTEGER PRIMARY KEY,
   date DATE,
   origin INTEGER,
-  airline TEXT,
-  aircraft TEXT,
-  altitude INTEGER check (altitude> 0),
+  airline TEXT DEFAULT "unknown",
+  aircraft TEXT DEFAULT "unknown",
+  altitude INTEGER CHECK (altitude > 0),
   heavy BOOLEAN);
 ```
+
 ### B
-
-
-```{sql 4B1, connection=dbcon}
-DROP TABLE IF EXISTS airports;
-```
 
 ```{sql 4B2, connection=dbcon}
 CREATE TABLE airports (
@@ -42,14 +77,13 @@ CREATE TABLE airports (
 );
 ```
 
+### C
 
 ```{sql 4C, connection = dbcon}
 ALTER TABLE flights ADD FOREIGN KEY (origin) REFERENCES airports(aid);
 ```
 
-```{sql connection=dbcon}
-drop table if exists conditions;
-```
+### D
 
 ```{sql 4D, connection= dbcon}
 /* look up  table after creating strikes table */
@@ -62,6 +96,7 @@ CREATE TABLE conditions (
 )
 ```
 
+### E
 
 ```{sql 4E, connection=dbcon }
 /* assuming the conditions are text that connect to sky_conditions */
@@ -80,15 +115,81 @@ CREATE TABLE strikes (
 /* conditions column as well */
 ```
 
+### F
 
 ```{sql 4F, connection=dbcon }
 ALTER TABLE strikes ADD FOREIGN KEY (fid) REFERENCES flights(fid)
 ```
 
+### G
 
-```{sql 4G, connection=dbcon, eval =F}
-/* evaluating our tables by adding random data */
-
+```{sql 4G1, connection=dbcon, eval =F}
+SELECT * FROM flights;
 ```
 
-/*my changes  copy code from here*/
+```{sql 4G2, connection=dbcon, eval =F}
+SELECT * FROM airports;
+```
+
+```{sql 4G3, connection=dbcon, eval =F}
+SELECT * FROM conditions;
+```
+
+```{sql 4G4, connection=dbcon, eval =F}
+SELECT * FROM strikes;
+```
+
+## 5
+
+/*note the question says directly from the file. I asked professor about this*/
+/*if is a problem simply change link to file name*/
+
+```{r 5}
+bird_url <- "https://s3.us-east-2.amazonaws.com/artificium.us/datasets/BirdStrikesData-V2.csv"
+
+bds.raw <- read.csv(file = bird_url, header = T,
+                   stringsAsFactors = F)
+```
+
+## 6
+
+/*USE AS REFERENCE*/
+/*http://artificium.us/lessons/06.r/l-6-301-sqlite-from-r/l-6-301.html#Querying_Data_Frames_with_sqldf*/
+
+```{r 6}
+# set backing store to SQLite for sqldf
+options(sqldf.driver = 'SQLite')
+
+df.flights <- sqldf::sqldf("SELECT 1 as fid, flight_date, origin, airline, model, altitude_ft, heavy_flag FROM `bds.raw` GROUP BY fid")
+print(df.flights)
+
+#WHAT IS AID vs state??????
+df.airlines <- sqldf::sqldf("SELECT 1 as aid, origin, airport FROM `bds.raw` GROUP BY aid")
+print(df.airlines)
+
+df.conditions <- sqldf::sqldf("SELECT 1 as cid, sky_conditions, Remarks FROM `bds.raw` GROUP BY cid")
+print(df.conditions)
+
+df.strikes <- sqldf::sqldf("SELECT 1 as sid, wildlife_struck, impact, damage, altitude_ft, sky_conditions FROM `bds.raw` GROUP BY sid")
+print(df.strikes)
+```
+
+```{sql TEST, connection=dbcon}
+SELECT * FROM flights;
+```
+
+## 7
+
+## 8
+
+## 9
+
+## 10
+
+## 11
+
+## 12
+
+```{r dissconnect}
+dbDisconnect(dbcon)
+```
