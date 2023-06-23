@@ -61,8 +61,8 @@ CREATE TABLE flights (
   fid INTEGER PRIMARY KEY,
   date DATE,
   origin INTEGER,
-  airline TEXT DEFAULT "unknown",
-  aircraft TEXT DEFAULT "unknown",
+  airline TEXT ,
+  aircraft TEXT ,
   altitude INTEGER CHECK (altitude > 0),
   heavy BOOLEAN);
 ```
