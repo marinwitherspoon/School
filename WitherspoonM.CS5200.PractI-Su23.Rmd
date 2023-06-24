@@ -322,6 +322,7 @@ ggplot(p10, aes(x = month, y = birds)) +
 
 ## 12
 
+GETTING ERORR, DISSCONNECTING FROM MySQL SERVER???
 ```{sql connection=dbcon}
 DROP PROCEDURE IF EXISTS newstrike;
 
