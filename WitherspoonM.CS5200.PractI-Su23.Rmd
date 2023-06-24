@@ -64,7 +64,7 @@ CREATE TABLE flights (
   airline TEXT ,
   aircraft TEXT ,
   altitude INTEGER CHECK (altitude > 0),
-  heavy BOOLEAN);
+  heavy TINYINT);
 ```
 
 ### B
@@ -108,7 +108,8 @@ CREATE TABLE strikes (
   impact TEXT,
   damage BOOLEAN,
   altitude INTEGER CHECK (altitude >= 0),
-  conditions INTEGER REFERENCES conditions (cid)
+  conditions INTEGER REFERENCES conditions (cid),
+  UNIQUE(fid)       /* taking only first instance of the strikes */
 );
 
 /* confusion about the first strike thing */
@@ -156,29 +157,120 @@ bds.raw <- read.csv(file = bird_url, header = T,
 /*USE AS REFERENCE*/
 /*http://artificium.us/lessons/06.r/l-6-301-sqlite-from-r/l-6-301.html#Querying_Data_Frames_with_sqldf*/
 
-```{r 6}
-# set backing store to SQLite for sqldf
-options(sqldf.driver = 'SQLite')
+Airports
+```{r}
+# airports table 
+states <- unique(bds.raw$origin)    # getting the unique states 
+n_states <- length(states)         
+aid <- 1:n_states                   
 
-df.flights <- sqldf::sqldf("SELECT 1 as fid, flight_date, origin, airline, model, altitude_ft, heavy_flag FROM `bds.raw` GROUP BY fid")
-print(df.flights)
-
-#WHAT IS AID vs state??????
-df.airlines <- sqldf::sqldf("SELECT 1 as aid, origin, airport FROM `bds.raw` GROUP BY aid")
-print(df.airlines)
-
-df.conditions <- sqldf::sqldf("SELECT 1 as cid, sky_conditions, Remarks FROM `bds.raw` GROUP BY cid")
-print(df.conditions)
-
-df.strikes <- sqldf::sqldf("SELECT 1 as sid, wildlife_struck, impact, damage, altitude_ft, sky_conditions FROM `bds.raw` GROUP BY sid")
-print(df.strikes)
+# making a data frame and then using dbwritetable to populate the table from the data.frame
+airports <- data.frame(aid = aid,airportState= ifelse(is.na(states),"unknown",states),airportCode=NA)
+dbWriteTable(dbcon, "airports", airports,row.names= FALSE, append= TRUE )
 ```
 
-```{sql TEST, connection=dbcon}
-SELECT * FROM flights;
+Flights Table
+```{r}
+
+# taking the unique identifies directly form the bds.raw rid column
+fid <- bds.raw$rid           
+date <- as.Date(bds.raw$flight_date, format = '%m/%d/%Y')     # taking only the date 
+
+# foreign key which connects the airports and the flights table  
+origin <- airports$aid[match(bds.raw$origin, airports$airportState)]    
+
+# default value as unknown if there is no airline and aircraft 
+airline <- ifelse(is.na(bds.raw$airline), "Unknown", bds.raw$airline)
+aircraft <- ifelse(is.na(bds.raw$aircraft), "Unknown", bds.raw$aircraft)
+# altitude is a string with ',', therefore converted it to integer and remove the ','
+altitude <- as.integer(gsub(",", '', bds.raw$altitude_ft))
+
+# {TRUE:1, FALSE:0}
+heavy <- ifelse(bds.raw$heavy_flag == 'Yes', 1, 0)  # mysql does not take boolean values 
+
+# Create the flights dataFrame
+flights <- data.frame(fid, date, origin, airline, aircraft, altitude, heavy)
+
+# Insert the values into the flights table
+dbWriteTable(dbcon, 'flights', flights, row.names = FALSE, append = TRUE)
+
 ```
 
-## 7
+
+Conditions table 
+```{r}
+# taking the unique conditions
+cid <- 1: length(unique(bds.raw$sky_conditions))
+sky_condition <- unique(bds.raw$sky_conditions)
+explanation <- NA
+
+# making a dataframe
+conditions <- data.frame(cid = cid,
+                          sky_condition = sky_condition,
+                         explanation = explanation)
+
+# populating the table with data Frame
+dbWriteTable(dbcon, 'conditions', conditions, row.names=FALSE, append=TRUE)
+```
+
+Strikes table 
+```{r}
+# sid is synthetic key 
+sid <- 1:n_rows
+# fid is the foreign key that connects strikes and flights
+fid <- flights$fid
+# directly taking from the data.frame
+numbirds <- as.integer(bds.raw$wildlife_struck)
+impact <- bds.raw$impact
+
+# mysql doesnt take boolean values 
+damage <- ifelse(bds.raw$damage == 'Caused damage', 1, 0)
+
+# string with ',', converted into integer without ','
+altitude <- as.integer(gsub(",","", bds.raw$altitude_ft))
+# this is the foreign key that connects the tables strikes and conditions
+cd <- match(as.character(bds.raw$sky_condition), as.character(conditions$sky_condition))
+
+# creating a dataframe
+strikes <- data.frame(sid= sid,
+                      fid = fid,
+                      numbirds = numbirds,
+                      impact = impact,
+                      damage = damage,
+                      altitude = altitude,
+                      conditions= cd)
+
+# populating the table with our data.frame
+dbWriteTable(dbcon, 'strikes', strikes, row.names = FALSE, append=TRUE)
+```
+
+  
+## 7   Taking a look at our created tables
+
+Flights table
+```{sql connection=dbcon}
+select * from flights limit 5;
+```
+airports table
+```{sql connection=dbcon}
+
+select * from airports limit 5;
+```
+
+Conditions table
+```{sql connection=dbcon}
+select * from conditions limit 3;
+```
+
+Strikes table
+```{sql connection=dbcon}
+select * from strikes limit 5;
+```
+
+
+
+
+
 
 ## 8
 
