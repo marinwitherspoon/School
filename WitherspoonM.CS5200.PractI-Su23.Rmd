@@ -142,8 +142,10 @@ SELECT * FROM strikes;
 
 ## 5
 
+```{sql connection=dbcon}
 /*note the question says directly from the file. I asked professor about this*/
 /*if is a problem simply change link to file name*/
+```
 
 ```{r 5}
 bird_url <- "https://s3.us-east-2.amazonaws.com/artificium.us/datasets/BirdStrikesData-V2.csv"
@@ -154,8 +156,11 @@ bds.raw <- read.csv(file = bird_url, header = T,
 
 ## 6
 
+```{sql connection=dbcon}
 /*USE AS REFERENCE*/
 /*http://artificium.us/lessons/06.r/l-6-301-sqlite-from-r/l-6-301.html#Querying_Data_Frames_with_sqldf*/
+```
+
 
 Airports
 ```{r}
