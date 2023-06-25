@@ -322,13 +322,19 @@ ggplot(p10, aes(x = month, y = birds)) +
 
 ## 12
 
-GETTING ERORR, DISSCONNECTING FROM MySQL SERVER???
+TA PLEASE NOTE: we tried running this on our MySQL server but kept maxing out our resources so we didn't get to really bug check it.
 ```{sql connection=dbcon}
 DROP PROCEDURE IF EXISTS newstrike;
 
 DELIMITER //
 
-CREATE PROCEDURE newstrike()
+CREATE PROCEDURE newstrike(
+IN n_date
+IN n_origin
+IN n_aircraft
+IN n_altitude
+IN n_numbirds
+IN n_conditions)
 BEGIN
   DECLARE v_fid INT;
   DECLARE v_aid INT;
@@ -347,6 +353,11 @@ BEGIN
     VALUES (v_fid);
         SET v_fid = LAST_INSERT_ID();
     END IF;
+```
+
+tests that procedure is working
+```{sql connection=dbcon}
+CALL newstrike('2023-06-24',3,'Airplane',1000,12,'No Cloud')
 ```
 
 ```{r dissconnect}
