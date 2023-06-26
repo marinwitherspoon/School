@@ -216,6 +216,8 @@ dbWriteTable(dbcon, 'conditions', conditions, row.names=FALSE, append=TRUE)
 
 Strikes table 
 ```{r}
+#row count variable
+n_rows <- nrow(bds.raw)
 # sid is synthetic key 
 sid <- 1:n_rows
 # fid is the foreign key that connects strikes and flights
