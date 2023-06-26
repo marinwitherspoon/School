@@ -312,11 +312,11 @@ print(p10)
 ```
 
 ## 11  - Bird strike by month - visualization.
-
+```{r}
 ggplot(p10, aes(x = month, y = birds)) +
   ggtitle('Bird Strikes by month - Visualized') +
   geom_col()
-
+```
 
 ## 12 Stored Procedure 
 
