@@ -53,7 +53,7 @@ DROP TABLE IF EXISTS strikes;
 SET FOREIGN_KEY_CHECKS = 1;
 ```
 
-### A
+### A  - Flights table
 
 Creates tables with the necessary column restrictions
 ```{sql 4A4, connection=dbcon}
@@ -67,7 +67,7 @@ CREATE TABLE flights (
   heavy TINYINT);
 ```
 
-### B
+### B  - Airports Table
 
 ```{sql 4B2, connection=dbcon}
 CREATE TABLE airports (
@@ -77,17 +77,15 @@ CREATE TABLE airports (
 );
 ```
 
-### C
+### C  Connecting Flights and Airports using foreign key id.
 
 ```{sql 4C, connection = dbcon}
 ALTER TABLE flights ADD FOREIGN KEY (origin) REFERENCES airports(aid);
 ```
 
-### D
+### D  - Creating table 'conditions'
 
 ```{sql 4D, connection= dbcon}
-/* look up  table after creating strikes table */
-/* assuming the cid here is synthetic key*/
 
 CREATE TABLE conditions (
     cid INT AUTO_INCREMENT PRIMARY KEY,
@@ -96,10 +94,9 @@ CREATE TABLE conditions (
 )
 ```
 
-### E
+### E  - Creating table 'Strikes'
 
 ```{sql 4E, connection=dbcon }
-/* assuming the conditions are text that connect to sky_conditions */
 
 CREATE TABLE strikes (
   sid INTEGER PRIMARY KEY,
@@ -112,17 +109,16 @@ CREATE TABLE strikes (
   UNIQUE(fid)       /* taking only first instance of the strikes */
 );
 
-/* confusion about the first strike thing */
-/* conditions column as well */
+
 ```
 
-### F
+### F -  Adding foreign key fid to strikes
 
 ```{sql 4F, connection=dbcon }
 ALTER TABLE strikes ADD FOREIGN KEY (fid) REFERENCES flights(fid)
 ```
 
-### G
+### G  - Evaluating the table
 
 ```{sql 4G1, connection=dbcon, eval =F}
 SELECT * FROM flights;
@@ -140,7 +136,7 @@ SELECT * FROM conditions;
 SELECT * FROM strikes;
 ```
 
-## 5
+## 5  - Connecting the csv to the database
 
 ```{sql connection=dbcon}
 /*note the question says directly from the file. I asked professor about this*/
@@ -154,7 +150,7 @@ bds.raw <- read.csv(file = bird_url, header = T,
                    stringsAsFactors = F)
 ```
 
-## 6
+## 6   - Populating the tables from the dataframe bds.raw
 
 ```{sql connection=dbcon}
 /*USE AS REFERENCE*/
@@ -250,15 +246,15 @@ dbWriteTable(dbcon, 'strikes', strikes, row.names = FALSE, append=TRUE)
 ```
 
   
-## 7   Taking a look at our created tables
+## 7   Taking a look at our created tables.
 
 Flights table
 ```{sql connection=dbcon}
 select * from flights limit 5;
 ```
+
 airports table
 ```{sql connection=dbcon}
-
 select * from airports limit 5;
 ```
 
@@ -272,7 +268,7 @@ Strikes table
 select * from strikes limit 5;
 ```
 
-## 8
+## 8   Greatest number of bird stirke incidents.
 
 ```{sql connection=dbcon}
 select COUNT(sid) AS strikCount, airportState
@@ -284,7 +280,7 @@ ORDER BY strikCount DESC
 limit 10;
 ```
 
-## 9
+## 9   Above average number of birdstrike.
 
 ```{sql connection=dbcon}
 SELECT COUNT(sid) AS strikCount, airline
@@ -302,7 +298,7 @@ HAVING COUNT(strikes.sid) > (
 )
 ```
 
-## 10
+## 10  - Total number of bird strike by month.
 
 ```{r}
 p10 <- dbGetQuery(dbcon, "
@@ -313,52 +309,68 @@ GROUP BY month")
 print(p10)
 ```
 
-## 11
+## 11  - Bird strike by month - visualization.
 
-```{r}
 ggplot(p10, aes(x = month, y = birds)) +
+  ggtitle('Bird Strikes by month - Visualized') +
   geom_col()
+
+
+## 12 Stored Procedure 
+
+```{sql connection=dbcon}
+/* drop the procedure if exists */
+DROP PROCEDURE if exists newstrike;
 ```
 
-## 12
-
-TA PLEASE NOTE: we tried running this on our MySQL server but kept maxing out our resources so we didn't get to really bug check it.
-```{sql connection=dbcon}
-DROP PROCEDURE IF EXISTS newstrike;
-
-DELIMITER //
-
+```{r}
+# defining the procedure 
+sql_statement <- "
 CREATE PROCEDURE newstrike(
-IN n_date
-IN n_origin
-IN n_aircraft
-IN n_altitude
-IN n_numbirds
-IN n_conditions)
+  IN n_date DATE,
+  IN n_origin VARCHAR(255),
+  IN n_aircraft VARCHAR(255),
+  IN n_altitude INT,
+  IN n_numbirds INT,
+  IN n_conditions VARCHAR(255)
+)
 BEGIN
   DECLARE v_fid INT;
   DECLARE v_aid INT;
-  DECLARE v_sid INT;
   
-  /*account for new airport*/
-  SELECT aid INTO v_aid FROM airports WHERE aid = v_aid;
-    IF v_aid IS NULL THEN INSERT INTO airports (aid) 
-    VALUES (v_aid);
-        SET v_aid = LAST_INSERT_ID();
-    END IF;
-    
-  /*account for new flight*/
-  SELECT fid INTO v_fid FROM flights WHERE fid = v_fid;
-    IF v_fid IS NULL THEN INSERT INTO flights (fid) 
-    VALUES (v_fid);
-        SET v_fid = LAST_INSERT_ID();
-    END IF;
+  SELECT aid INTO v_aid FROM airports WHERE aid = n_origin;
+  IF v_aid IS NULL THEN 
+    INSERT INTO airports (aid) VALUES (n_origin);
+    SET v_aid = LAST_INSERT_ID();
+  END IF;
+
+  SELECT fid INTO v_fid FROM flights WHERE fid = n_aircraft;
+  IF v_fid IS NULL THEN 
+    INSERT INTO flights (fid) VALUES (n_aircraft);
+    SET v_fid = LAST_INSERT_ID();
+  END IF;
+
+  INSERT INTO strikes (fid, numbirds, impact, damage, altitude, conditions)
+  VALUES (v_fid, n_numbirds, 'N/A', 0, n_altitude, n_conditions);
+  
+END;
+"
+
+# Execute the SQL statement
+dbExecute(dbcon, statement = sql_statement)
 ```
+
 
 tests that procedure is working
 ```{sql connection=dbcon}
-CALL newstrike('2023-06-24',3,'Airplane',1000,12,'No Cloud')
+CALL newstrike('2023-06-24', 3, 'Airplane', 1000, 12, 'No Cloud');
 ```
+
+As we can see that the new strike is added to the strike table
+```{sql connection=dbcon}
+select * from strikes limit 5;
+```
+
 
 ```{r dissconnect}
 dbDisconnect(dbcon)
