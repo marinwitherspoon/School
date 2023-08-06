@@ -1,0 +1,14 @@
+line 55 
+
+dbExecute(con, "CREATE TABLE salestxn (
+          tid INT PRIMARY KEY,
+          date DATE,
+          quantity INT,
+          amount INT,
+          ridFK INT NOT NULL,
+          pidFK INT NOT NULL,
+          cidFK INT NOT NULL,
+          FOREIGN KEY (ridFK) REFERENCES reps (rid),
+          FOREIGN KEY (pidFK) REFERENCES products (pid),
+          FOREIGN KEY (cidFK) REFERENCES customers (cid)
+)")
