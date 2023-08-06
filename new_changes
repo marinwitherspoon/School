@@ -91,7 +91,7 @@ data <- process_sales_data(con,folder_path)
 data
 
 for (i in seq_len(nrow(data))) {
-  dbExecute(con, sprintf("INSERT INTO salestxn (tid, data, quantity, amount, ridFK, pidFK, cidFK) VALUES (%d, '%s', %d, %d, %d, %d, %d)",
+  dbExecute(con, sprintf("INSERT INTO salestxn (tid, date, quantity, amount, ridFK, pidFK, cidFK) VALUES (%d, '%s', %d, %d, %d, %d, %d)",
                          data$tid[i], data$date[i], data$quantity[i], data$amount[i], data$ridFK[i], data$pidFK[i], data$cidFK[i]))
 }
 
