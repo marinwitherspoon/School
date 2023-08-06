@@ -1,4 +1,3 @@
-
 # PART 1-  LOAD XML DATA
 
 # Authors : Marin Witherspoon and Sumit Hawal
@@ -54,7 +53,7 @@ dbExecute(con,"CREATE TABLE customers (
 # creating Sales table 
 dbExecute(con, "CREATE TABLE salestxn (
           tid INT PRIMARY KEY,
-          data Date,
+          date DATE,
           quantity INT,
           amount INT,
           ridFK INT NOT NULL,
@@ -76,6 +75,7 @@ dbExecute(con , "
           FOREIGN KEY (rid) REFERENCES reps(rid))")
 
 ################################################################################################
+folder_path <- "txn-xml"
 
 # processing the Representative file
 reps_data <- function(path) { 
@@ -119,7 +119,7 @@ dbGetQuery(con, "select * from reps")
 
 ####################################################################################################
 
-# function to populate products table
+#function to populate products table
 process_products_data <- function(folder_path){
 
 # Get a list of all XML files with the pattern "pharmaSale*.xml" in the folder
@@ -148,19 +148,18 @@ combined_data <- unique(combined_data)
 # Generate unique pid as it is synthetic 
 combined_data$pid <- seq_len(nrow(combined_data))
 
-
+print(combined_data)
 combined_data <- combined_data[, c("pid", "text")]
-
 colnames(combined_data) <- c('pid','pname') 
-
+print(combined_data)
 return(combined_data)
 
 }
 
 # change the folder path according to your system
-folder_path <- "C:\\Users\\smeet\\Desktop\\CS5200.PracticumII.WitherspoonM-HawalS\\CS5200.PracticumII.WitherspoonM-HawalS\\txn-xml"
-products_data <- process_products_data(folder_path)
 
+products_data <- process_products_data(folder_path)
+print(products_data)
 # writing the dataframe to table
 dbWriteTable(con, "products", products_data, append = TRUE)
 
@@ -202,7 +201,6 @@ return(combined_cust_data)
 
 
   
-folder_path <- "C:\\Users\\smeet\\Desktop\\CS5200.PracticumII.WitherspoonM-HawalS\\CS5200.PracticumII.WitherspoonM-HawalS\\txn-xml"
 customer_data <- process_customer_data(folder_path)
 
 # writing the table to our sqlite entity
@@ -259,7 +257,6 @@ process_cst_data <- function(con, folder_path) {
 
 
 process_cst_data(con, folder_path)
-folder_path <- "C:\\Users\\smeet\\Desktop\\CS5200.PracticumII.WitherspoonM-HawalS\\CS5200.PracticumII.WitherspoonM-HawalS\\txn-xml"
 
 # checking if we successfull added the data
 dbGetQuery(con, "select * from cust_reps")
@@ -274,6 +271,9 @@ process_sales_data <- function(con, folder_path) {
   # Initialize an empty list to store individual dataframes from each XML file
   salestxn_data_list <- list()
   
+  
+  # tid 
+  last_tid <- 0
   for (file_path in xml_files) {
     sales_xml <- xmlParse(file_path)
     # creating a dataframe from current dataframe
@@ -300,13 +300,13 @@ process_sales_data <- function(con, folder_path) {
       # Convert the date
       converted_date <- as.Date(txn_date, format = "%m/%d/%Y")
       
-      # Generate a synthetic "tid" for each transaction
-      tid <- max(combined_salestxn_data$tid, default = 0) + 1
+      # tid append
+      last_tid <- last_tid + 1
       
       # Append the transaction data to the list
       salestxn_data_list[[length(salestxn_data_list) + 1]] <- data.frame(
-        tid = tid,
-        data = converted_date,
+        tid = last_tid,
+        date = converted_date,
         quantity = as.integer(quantity),
         amount = as.integer(amount),
         rid = rid,
@@ -322,7 +322,7 @@ process_sales_data <- function(con, folder_path) {
   # Now, create a new data frame with column names according to our table columns
   salestxn_data <- data.frame(
     tid = combined_salestxn_data$tid,
-    data = combined_salestxn_data$data,
+    date = combined_salestxn_data$date,
     quantity = combined_salestxn_data$quantity,
     amount = combined_salestxn_data$amount,
     ridFK = combined_salestxn_data$rid,
@@ -335,13 +335,18 @@ process_sales_data <- function(con, folder_path) {
 }
 
 
-folder_path <- "C:\\Users\\smeet\\Desktop\\CS5200.PracticumII.WitherspoonM-HawalS\\CS5200.PracticumII.WitherspoonM-HawalS\\txn-xml"
 data <- process_sales_data(con,folder_path)
-# writing the dataframe to our table
-dbWriteTable(con, "salestxn", data, row.names=FALSE,overwrite= TRUE)
 
+data
 
+for (i in seq_len(nrow(data))) {
+  dbExecute(con, sprintf("INSERT INTO salestxn (tid, date, quantity, amount, ridFK, pidFK, cidFK) VALUES (%d, '%s', %d, %d, %d, %d, %d)",
+                         data$tid[i], data$date[i], data$quantity[i], data$amount[i], data$ridFK[i], data$pidFK[i], data$cidFK[i]))
+}
 
+dbGetQuery(con, "select count(*) from salestxn ")
+
+dbGetQuery(con, "pragma table_info(salestxn)")
 # This the encoding schema for converting the date
 # first it is extracted as string and then using as.Date it is converted to data according to this schema(e.g., YYYY-MM-DD)
 
