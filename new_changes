@@ -12,3 +12,87 @@ dbExecute(con, "CREATE TABLE salestxn (
           FOREIGN KEY (pidFK) REFERENCES products (pid),
           FOREIGN KEY (cidFK) REFERENCES customers (cid)
 )")
+
+#  delete the process sales data function and copy this from line 268
+process_sales_data <- function(con, folder_path) {
+  # Get a list of all XML files with the pattern "pharmaSale*.xml" in the folder
+  xml_files <- list.files(path = folder_path, pattern = "pharmaSale.*\\.xml", full.names = TRUE)
+  
+  # Initialize an empty list to store individual dataframes from each XML file
+  salestxn_data_list <- list()
+  
+  
+  # tid 
+  last_tid <- 0
+  for (file_path in xml_files) {
+    sales_xml <- xmlParse(file_path)
+    # creating a dataframe from current dataframe
+    transactions <- xmlToDataFrame(nodes = getNodeSet(sales_xml, "//txn"))
+    
+    # Process each row and extract data we require 
+    for (i in seq_len(nrow(transactions))) {
+      txn_date <- transactions[i, "date"]
+      quantity <- transactions[i, "qty"]
+      amount <- transactions[i, "amount"]
+      customer_name <- transactions[i, "cust"]
+      product_name <- transactions[i, "prod"]
+      rep_id <- transactions[i, "repID"]
+      
+      # matching the keys based on the customer_name product_name and rep_id from our tables
+      cid <- dbGetQuery(con, sprintf("SELECT cid FROM customers WHERE customer = '%s'", customer_name))$cid
+  
+      pid <- dbGetQuery(con, sprintf("SELECT pid FROM products WHERE pname = '%s'", product_name))$pid
+    
+      rid <- dbGetQuery(con, sprintf("SELECT rid FROM reps WHERE rid = '%s'", rep_id))$rid
+
+      # This the encoding schema for converting the date
+      # first it is extracted as string and then using as.Date it is converted to data according to this schema(e.g., YYYY-MM-DD)
+      # Convert the date
+      converted_date <- as.Date(txn_date, format = "%m/%d/%Y")
+      
+      # tid append
+      last_tid <- last_tid + 1
+      
+      # Append the transaction data to the list
+      salestxn_data_list[[length(salestxn_data_list) + 1]] <- data.frame(
+        tid = last_tid,
+        date = converted_date,
+        quantity = as.integer(quantity),
+        amount = as.integer(amount),
+        rid = rid,
+        pid = pid,
+        cid = cid
+      )
+    }
+  }
+  
+  # Combine add each list into a single dataframe
+  combined_salestxn_data <- do.call(rbind, salestxn_data_list)
+  
+  # Now, create a new data frame with column names according to our table columns
+  salestxn_data <- data.frame(
+    tid = combined_salestxn_data$tid,
+    date = combined_salestxn_data$date,
+    quantity = combined_salestxn_data$quantity,
+    amount = combined_salestxn_data$amount,
+    ridFK = combined_salestxn_data$rid,
+    pidFK = combined_salestxn_data$pid,
+    cidFK = combined_salestxn_data$cid
+  )
+  
+  # returning the final created dataframe
+  return(salestxn_data)
+}
+
+
+folder_path <- "C:\\Users\\smeet\\Desktop\\CS5200.PracticumII.WitherspoonM-HawalS\\CS5200.PracticumII.WitherspoonM-HawalS\\txn-xml"
+data <- process_sales_data(con,folder_path)
+
+data
+
+for (i in seq_len(nrow(data))) {
+  dbExecute(con, sprintf("INSERT INTO salestxn (tid, data, quantity, amount, ridFK, pidFK, cidFK) VALUES (%d, '%s', %d, %d, %d, %d, %d)",
+                         data$tid[i], data$date[i], data$quantity[i], data$amount[i], data$ridFK[i], data$pidFK[i], data$cidFK[i]))
+}
+
+
