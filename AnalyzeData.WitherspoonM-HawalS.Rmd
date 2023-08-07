@@ -16,9 +16,28 @@ dbcon <-  dbConnect(RMySQL::MySQL(),
                     port = 3306)
 ```
 
+
+
+```{sql q1, connection = con}
+SELECT pname,SUM(quantity) as quantity, 
+strftime('%Y-Q', date) || ((strftime('%m', date) - 1) / 3 + 1) AS quarter
+FROM products
+JOIN salestxn ON salestxn.pidFK = products.pid
+GROUP BY pname,quarter
+```
+```{sql q1, connection = con}
+SELECT SUM(quantity) as quantity, 
+strftime('%Y-Q', date) || ((strftime('%m', date) - 1) / 3 + 1) AS quarter
+FROM products
+JOIN salestxn ON salestxn.pidFK = products.pid
+GROUP BY quarter
+```
+
+
 # Query 1
 ```{sql q1, connection = con}
-SELECT fname,lname,SUM(quantity) AS units FROM reps
+SELECT fname,lname,SUM(quantity) AS units 
+FROM reps
 JOIN salestxn ON salestxn.ridFK = reps.rid
 GROUP BY rid
 ORDER BY units DESC
@@ -26,14 +45,17 @@ LIMIT 5;
 ```
 
 ```{sql, connection = dbcon}
-SELECT * FROM rep_facts
+SELECT fname,lname,SUM(quant) AS units 
+FROM rep_facts
+GROUP BY rid
+ORDER BY units DESC
+LIMIT 5
 ```
 
 ```{sql q1, connection = dbcon}
 SELECT fname,lname,SUM(quant) AS units FROM rep_facts
-GROUP BY rid,tid
+GROUP BY rid
 ORDER BY units DESC
-LIMIT 5;
 ```
 
 # Query 2
@@ -43,7 +65,7 @@ GROUP BY month;
 ```
 
 ```{sql q2, connection = dbcon}
-SELECT MONTH(date) as month,SUM(quant) FROM rep_facts
+SELECT MONTH(date) as month,SUM(quant) as quant FROM rep_facts
 GROUP BY month;
 ```
 
