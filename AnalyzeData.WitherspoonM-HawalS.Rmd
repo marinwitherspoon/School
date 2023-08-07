@@ -1,4 +1,53 @@
 ---
 title: "Analyze Data"
-author: "Witherspoon Marin, Hawal Sumit
+author: "Witherspoon Marin, Hawal Sumit"
 ---
+
+# Why the rediculous high numbers? redundant COmpiling all numbers for totals
+# why only 2020?
+# can total sold for each quarter..... be put in connecting table rather than in the main fact table?
+
+```{r setup}
+dbcon <-  dbConnect(RMySQL::MySQL(), 
+                    user = 'sql9637042', 
+                    password = 'DjcYLGYggR',
+                    dbname = 'sql9637042', 
+                    host = 'sql9.freemysqlhosting.net', 
+                    port = 3306)
+```
+
+# Query 1
+```{sql q1, connection = con}
+SELECT fname,lname,SUM(quantity) AS units FROM reps
+JOIN salestxn ON salestxn.ridFK = reps.rid
+GROUP BY rid
+ORDER BY units DESC
+LIMIT 5;
+```
+
+```{sql, connection = dbcon}
+SELECT * FROM rep_facts
+```
+
+```{sql q1, connection = dbcon}
+SELECT fname,lname,SUM(quant) AS units FROM rep_facts
+GROUP BY rid,tid
+ORDER BY units DESC
+LIMIT 5;
+```
+
+# Query 2
+```{sql q2, connection = con}
+SELECT strftime('%m', date) as month,SUM(quantity) as quant FROM salestxn
+GROUP BY month;
+```
+
+```{sql q2, connection = dbcon}
+SELECT MONTH(date) as month,SUM(quant) FROM rep_facts
+GROUP BY month;
+```
+
+
+```{r diconnect}
+dbDisconnect(dbcon)
+```
