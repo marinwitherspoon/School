@@ -26,13 +26,13 @@ dbcon <-  dbConnect(RMySQL::MySQL(),
 dbExecute(dbcon, "DROP TABLE IF EXISTS prod_facts;")
 dbExecute(dbcon, "DROP TABLE IF EXISTS prod_reps;")
 dbExecute(dbcon, "DROP TABLE IF EXISTS prod_customers;")
+dbExecute(dbcon, "DROP TABLE IF EXISTS prod_month;")
 
 dbExecute(dbcon,
           "CREATE TABLE prod_reps (
           rid INT PRIMARY KEY ,
           fname TEXT,
-          lname TEXT,
-          region TEXT
+          lname TEXT
           )")
 
 dbExecute(dbcon,
@@ -44,18 +44,20 @@ dbExecute(dbcon,
 
 dbExecute(dbcon,
           "CREATE TABLE prod_facts (
-          pid INT PRIMARY KEY ,
+          pid INT PRIMARY KEY,
           pname TEXT,
-          total_quant INT,
+          total_sold INT,
+          YEAR INT,
           quarter TEXT,
-          quart_quant INT,
           region TEXT,
-          reg_quant INT,
-          ridFK INT,
-          cidFK INT,
-          FOREIGN KEY (ridFK) REFERENCES prod_reps (rid),
-          FOREIGN KEY (cidFK) REFERENCES prod_customers (cid)
-          )")
+          total_sold_per_region INT)")
+
+dbExecute(dbcon,
+          "CREATE TABLE prod_month (
+          pid INT PRIMARY KEY,
+          pname TEXT,
+          month TEXT,
+          total_sold_per_month INT)")
 
 #creating rep fact tables----------
 # drop the tables if exists
@@ -82,18 +84,12 @@ dbExecute(dbcon,
           rid INT PRIMARY KEY,
           fname TEXT,
           lname TEXT,
-          region TEXT,
+          total_sold INT,
+          year INT,
           quarter TEXT,
-          quart_quant INT,
-          date DATE,
           pname TEXT,
-          quant INT,
-          cidFK INT,
-          pidFK INT,
-          FOREIGN KEY (cidFK) REFERENCES rep_customer (cid),
-          FOREIGN KEY (pidFK) REFERENCES rep_product (pid))")
+          total_sold_per_product INT)")
 
-#------------
 #Table filling
 ###################################################
 
@@ -111,29 +107,65 @@ t_fill <- function(table,que) {
   #fill table
   dbWriteTable(dbcon,table,f_qu, append = TRUE, row.names = FALSE)}
 
-#filling product fact tables-----------------------------
+#filling product prod tables-----------------------------
 
 #fill prod_reps table
-t_fill("prod_reps","SELECT * FROM reps")
+t_fill("prod_reps","SELECT rid,fname,lname FROM reps")
 
 #table fill prod_customers
 t_fill("prod_customers","SELECT * FROM customers")
 
 #fill prod_facts table
-prod_facts_quer <- "SELECT pid, pname, 
-                    SUM(quantity) OVER(PARTITION BY pname) AS Total_quant,
-                    strftime('%Y-Q', date) || ((strftime('%m', date) - 1) / 3 + 1) AS quarter, 
-                    SUM(quantity) OVER(PARTITION BY strftime('%Y-Q', date) || ((strftime('%m', date) - 1) / 3 + 1)) AS quart_quant,
-                    region,
-                    SUM(quantity) OVER(PARTITION BY region) AS reg_quant,
-                    ridFK, cidFK
-                    FROM salestxn 
-                    JOIN products ON salestxn.pidFK = products.pid 
-                    JOIN reps ON reps.rid = salestxn.ridFK"
+prod_facts_quer <- "SELECT
+    total_sold.pid,
+    total_sold.pname,
+    total_sold.total_sold,
+    quarter_and_year.year,
+    quarter_and_year.quarter,
+    region.region,
+    region.total_sold_per_region
+FROM (
+    SELECT
+        p.pid,
+        p.pname,
+        SUM(s.quantity) AS total_sold
+    FROM salestxn s 
+    JOIN products p ON p.pid = s.pidFK
+    GROUP BY p.pid, p.pname) total_sold
+LEFT JOIN (
+    SELECT
+        p.pid,
+        STRFTIME('%Y', st.date) AS year,
+        (CAST(STRFTIME('%m', st.date) AS INTEGER) - 1) / 3 + 1 AS quarter,
+        SUM(st.quantity) AS total_sold_per_quarter_and_year
+    FROM products p
+    JOIN salestxn st ON p.pid = st.pidFK
+    GROUP BY p.pid, year, quarter) quarter_and_year 
+    ON total_sold.pid = quarter_and_year.pid
+LEFT JOIN (
+    SELECT
+        p.pid,
+        r.region,
+        SUM(st.quantity) AS total_sold_per_region
+    FROM products p
+    JOIN salestxn st ON p.pid = st.pidFK
+    JOIN reps r ON st.ridFK = r.rid
+    GROUP BY p.pid, r.region) region ON total_sold.pid = region.pid;"
 
 t_fill("prod_facts",prod_facts_quer)
 
-#filling rep fact tables----------
+month_data_query <- "SELECT
+p.pid,
+p.pname,
+STRFTIME('%Y-%m', st.date) AS month,
+SUM(st.quantity) AS total_sold_per_month
+FROM products p
+JOIN salestxn st ON p.pid = st.pidFK
+GROUP BY p.pname, month"
+t_fill("prod_month",month_data_query)
+month_fill <- dbGetQuery(con,month_data_query)
+
+#filling rep fact tables---------------------------------------
 
 #filling rep_customers table
 t_fill("rep_customer","SELECT * FROM customers")
@@ -144,15 +176,43 @@ rep_product_query <- "SELECT pid, quantity, amount FROM salestxn
 t_fill("rep_product",rep_product_query)
 
 #filling rep_facts
-rep_facts_query <- "SELECT rid,fname,lname, region,
-                    strftime('%Y-Q', date) || ((strftime('%m', date) - 1) / 3 + 1) AS quarter, 
-                    SUM(quantity) OVER(PARTITION BY strftime('%Y-Q', date) || ((strftime('%m', date) - 1) / 3 + 1)) AS quart_quant,
-                    date, pname,
-                    SUM(quantity) OVER(PARTITION BY pname) AS quant,
-                    cidFK,pidFK
-                    FROM reps
-                    JOIN salestxn ON salestxn.pidFK = products.pid
-                    JOIN products ON salestxn.pidFK = products.pid"
+rep_facts_query <- "SELECT
+    rep_total.rid,
+    rep_total.fname,
+    rep_total.lname,
+    rep_total.total_sold,
+    quarter_and_year.year,
+    quarter_and_year.quarter,
+    product_total.pname,
+    product_total.total_sold_per_product
+FROM (
+    SELECT
+        r.rid,
+        r.fname,
+        r.lname,
+        SUM(st.quantity) AS total_sold
+    FROM reps r
+    JOIN salestxn st ON r.rid = st.ridFK
+    GROUP BY r.rid, r.fname, r.lname) rep_total
+LEFT JOIN (
+    SELECT
+        r.rid,
+        STRFTIME('%Y', st.date) AS year,
+        (CAST(STRFTIME('%m', st.date) AS INTEGER) - 1) / 3 + 1 AS quarter,
+        SUM(st.quantity) AS total_sold_per_quarter_and_year
+    FROM reps r
+    JOIN salestxn st ON r.rid = st.ridFK
+    GROUP BY r.rid, year, quarter) quarter_and_year 
+    ON rep_total.rid = quarter_and_year.rid
+LEFT JOIN (
+    SELECT
+        r.rid,
+        p.pname,
+        SUM(st.quantity) AS total_sold_per_product
+    FROM reps r
+    JOIN salestxn st ON r.rid = st.ridFK
+    JOIN products p ON st.pidFK = p.pid
+    GROUP BY r.rid, p.pname) product_total ON rep_total.rid = product_total.rid;"
 
 t_fill("rep_facts",rep_facts_query)
 #-------------
