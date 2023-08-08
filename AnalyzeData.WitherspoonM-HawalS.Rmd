@@ -1,3 +1,8 @@
+---
+title: "Analyze Data"
+author: "Witherspoon Marin, Hawal Sumit"
+---
+
 ```{r setup}
 library(ggplot2)
 #connect to mysql database
@@ -27,10 +32,8 @@ print(q2_month)
 q2_month$month <- factor(q2_month$month, levels = unique(q2_month$month))
 ggplot(q2_month, aes(x = month, y = total_sold_per_month, fill = pname)) +
   geom_bar(stat = "identity") +
-  labs(x = "Month", y = "total_sold_per_month
-<int>
-", fill = "Product Name") +
-  theme_minimal()
+  labs(x = "Month", y = "total_sold_per_month", fill = "Product Name") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 ```
 
 ```{R q2}
@@ -38,9 +41,10 @@ print(month_fill)
 month_fill$month <- factor(month_fill$month, levels = unique(month_fill$month))
 ggplot(month_fill, aes(x = month, y = total_sold_per_month, fill = pname)) +
   geom_bar(stat = "identity") +
-  labs(x = "Month", y = "total_sold_per_month", fill = "Product Name") +
-  theme_minimal()
+  labs(x = "Month", y = "total_sold_per_month", fill = "Product Name") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 ```
 
 ```{r diconnect}
 dbDisconnect(dbcon)
+```
