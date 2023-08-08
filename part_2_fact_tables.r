@@ -88,18 +88,6 @@ LEFT JOIN (
 ############################################################################################
 
 
-# Query table for total sold per month 
-dbGetQuery(con , "SELECT
-p.pname,
-STRFTIME('%Y-%m', st.date) AS month,
-SUM(st.quantity) AS total_sold_per_month
-FROM products p
-JOIN salestxn st ON p.pid = st.pidFK
-GROUP BY p.pname, month;  ")
-
-
-################################################################################################
-
 # sales rep fact table
 dbGetQuery( con, "SELECT
 r.rid,
