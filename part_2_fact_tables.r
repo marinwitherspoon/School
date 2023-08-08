@@ -175,6 +175,39 @@ LEFT JOIN (
 
 
 #####################################################################################################
+query <-  dbGetQuery(con,"SELECT
+p.pname,
+STRFTIME('%Y-%m', st.date) AS month,
+SUM(st.quantity) AS total_sold_per_month
+FROM products p
+JOIN salestxn st ON p.pid = st.pidFK
+GROUP BY p.pname, month;")
 
+
+dbExecute(con, "drop table if exists monthly_sales;")
+dbExecute(con, "CREATE TABLE monthly_sales (
+    pname TEXT,
+    month DATE,
+    total_sold_per_month INT
+);")
+
+
+dbWriteTable(con, "monthly_sales", query, append=TRUE)
+
+library(ggplot2)
+
+query <- "select * from monthly_sales"
+data <- dbGetQuery(con, query)
+data
+
+ggplot(data, aes(x = month, y = total_sold_per_month, group = pname, color = pname)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Total Sold per Month",
+       x = "Month",
+       y = "Total Sold") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+#######################################################################################
 
 dbDisconnect(con)
