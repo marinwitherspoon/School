@@ -1,13 +1,6 @@
----
-title: "Analyze Data"
-author: "Witherspoon Marin, Hawal Sumit"
----
-
-# Why the rediculous high numbers? redundant COmpiling all numbers for totals
-# why only 2020?
-# can total sold for each quarter..... be put in connecting table rather than in the main fact table?
-
 ```{r setup}
+library(ggplot2)
+#connect to mysql database
 dbcon <-  dbConnect(RMySQL::MySQL(), 
                     user = 'sql9637042', 
                     password = 'DjcYLGYggR',
@@ -16,60 +9,38 @@ dbcon <-  dbConnect(RMySQL::MySQL(),
                     port = 3306)
 ```
 
-
-
-```{sql q1, connection = con}
-SELECT pname,SUM(quantity) as quantity, 
-strftime('%Y-Q', date) || ((strftime('%m', date) - 1) / 3 + 1) AS quarter
-FROM products
-JOIN salestxn ON salestxn.pidFK = products.pid
-GROUP BY pname,quarter
-```
-```{sql q1, connection = con}
-SELECT SUM(quantity) as quantity, 
-strftime('%Y-Q', date) || ((strftime('%m', date) - 1) / 3 + 1) AS quarter
-FROM products
-JOIN salestxn ON salestxn.pidFK = products.pid
-GROUP BY quarter
-```
-
-
 # Query 1
-```{sql q1, connection = con}
-SELECT fname,lname,SUM(quantity) AS units 
-FROM reps
-JOIN salestxn ON salestxn.ridFK = reps.rid
-GROUP BY rid
-ORDER BY units DESC
-LIMIT 5;
-```
 
 ```{sql, connection = dbcon}
-SELECT fname,lname,SUM(quant) AS units 
+SELECT fname,lname,total_sold AS units 
 FROM rep_facts
 GROUP BY rid
 ORDER BY units DESC
 LIMIT 5
 ```
 
-```{sql q1, connection = dbcon}
-SELECT fname,lname,SUM(quant) AS units FROM rep_facts
-GROUP BY rid
-ORDER BY units DESC
-```
-
 # Query 2
-```{sql q2, connection = con}
-SELECT strftime('%m', date) as month,SUM(quantity) as quant FROM salestxn
-GROUP BY month;
+
+```{R q2}
+q2_month <- dbGetQuery(dbcon,"SELECT * FROM prod_month")
+print(q2_month)
+q2_month$month <- factor(q2_month$month, levels = unique(q2_month$month))
+ggplot(q2_month, aes(x = month, y = total_sold_per_month, fill = pname)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Month", y = "total_sold_per_month
+<int>
+", fill = "Product Name") +
+  theme_minimal()
 ```
 
-```{sql q2, connection = dbcon}
-SELECT MONTH(date) as month,SUM(quant) as quant FROM rep_facts
-GROUP BY month;
+```{R q2}
+print(month_fill)
+month_fill$month <- factor(month_fill$month, levels = unique(month_fill$month))
+ggplot(month_fill, aes(x = month, y = total_sold_per_month, fill = pname)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Month", y = "total_sold_per_month", fill = "Product Name") +
+  theme_minimal()
 ```
-
 
 ```{r diconnect}
 dbDisconnect(dbcon)
-```
