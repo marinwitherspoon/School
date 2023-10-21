@@ -1,8 +1,3 @@
----
-title: "Practicum I CS5200"
-author: "Marin Witherspoon and Sumit Hawal"
-date: "Summer Full 2023"
----
 
 ```{r, Limport, include = TRUE}
 library(RMySQL)
